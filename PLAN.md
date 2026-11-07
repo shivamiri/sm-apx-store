@@ -5,7 +5,7 @@
 **Tagline:** "Discover. Download. Explore."  
 **Target Environment:** Core PHP 8 + MySQL on free shared hosting (InfinityFree) & Native Android App (Kotlin, Google AI Studio)  
 **Build Methodology:** One file at a time via Gemini. Phone-first workflow with zero CLI/npm/Node/Composer dependencies.  
-**Canonical Sources:** PRD.md, DESIGN.md, ARCHITECTURE.md, DATABASE.md, API.md, AGENTS.md, README.md  
+**Canonical Sources:** PRD.md, DESIGN.md, ARCHITECTURE.md, DATABASE.md, API.md, AGENTS.md, README.md, SETUP.md  
 
 ---
 
@@ -24,7 +24,7 @@
 
 ## Phase 1: Foundation & Database
 
-Goal: Establish the database schema with the resolved rate-limiting gap, initialize the core PHP database connection with the unified JSON envelope helper, and lay down the DESIGN.md CSS design system.
+Goal: Establish the database schema with the resolved rate-limiting gap, initialize the core PHP database connection with the unified JSON envelope helper and rate-limit helper, provision the admin credentials hash, and lay down the DESIGN.md CSS design system.
 
 ### Tasks
 
@@ -40,11 +40,17 @@ Goal: Establish the database schema with the resolved rate-limiting gap, initial
   * **Dependencies:** Task 1.1
   * **Verification:** In phpMyAdmin on phone browser, check that all 10 tables exist (`users`, `admins`, `categories`, `apps`, `app_submissions`, `app_screenshots`, `reviews`, `reports`, `system_settings`, `rate_limits`) and verify seed apps appear in the `apps` table.
 
-- [ ] **Task 1.3: Core Configuration & PDO Database Connector**
-  * **Build:** Create `common/config.php` defining database credentials (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`), site constants (`APP_NAME`, `APP_SHORT_NAME`, `SITE_URL`), session boot (`session_start()`), and a robust PDO database connection helper function `getDbConnection()`. Also include the standard JSON envelope helper function `jsonResponse($success, $data, $error, $httpCode)`.
-  * **Files Touched:** `common/config.php`
+- [ ] **Task 1.2b: Generate Admin Bcrypt Password Hash**
+  * **Build:** Create a temporary helper script `make-hash.php` on the hosting server that runs `password_hash($adminPassword, PASSWORD_BCRYPT)` for your chosen admin password. Load `make-hash.php` once in the browser, copy the output hash starting with `$2y$10$`, update the seed admin row (`id = 1`, username `shivamiri`) in the `admins` table via phpMyAdmin, and immediately delete `make-hash.php` from the server.
+  * **Files Touched:** `make-hash.php` (temporary, deleted immediately), MySQL Database (`admins` table via phpMyAdmin)
   * **Dependencies:** Task 1.2
-  * **Verification:** Upload `common/config.php` via hosting file manager, create a temporary 3-line test script calling `getDbConnection()`, load it in phone browser, and confirm no database connection errors occur. Delete test script.
+  * **Verification:** Open phpMyAdmin, inspect table `admins` row 1, and verify that `password_hash` no longer contains the placeholder string and now holds the real bcrypt hash. Confirm `make-hash.php` is permanently deleted from the file manager.
+
+- [ ] **Task 1.3: Core Configuration, PDO Database Connector & Rate Limit Helper**
+  * **Build:** Create `common/config.php` defining database credentials (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`), site constants (`APP_NAME`, `APP_SHORT_NAME`, `SITE_URL`), Google OAuth constants (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`), session boot (`session_start()`), and a robust PDO database connection helper function `getDbConnection()`. Include the standard JSON envelope helper function `jsonResponse($success, $data, $error, $httpCode)` and the database-driven rate-limiting helper function `checkRateLimit($ip, $endpoint, $limit, $windowSeconds)` using the `rate_limits` table created in Task 1.2.
+  * **Files Touched:** `common/config.php`
+  * **Dependencies:** Task 1.2, Task 1.2b
+  * **Verification:** Upload `common/config.php` via hosting file manager, create a temporary 3-line test script calling `getDbConnection()` and `checkRateLimit('127.0.0.1', 'test', 10, 60)`, load it in phone browser, and confirm no database errors occur. Delete test script.
 
 - [ ] **Task 1.4: Design System CSS Foundation**
   * **Build:** Create `assets/css/style.css` containing all color tokens from DESIGN.md (dark navy `#070B14`, surface `#0D1527`, electric cyan `#00E5FF`, cobalt `#0070F3`, text, status colors), typography scales, 8pt spacing system, squircle app icon classes, and dark/light mode CSS custom property overrides.
@@ -59,7 +65,7 @@ Goal: Establish the database schema with the resolved rate-limiting gap, initial
   * **Verification:** Create a temporary test page including both files, load in mobile browser, verify responsive layout, top brand bar, and bottom navigation bar render without visual overflow.
 
 ### Definition of Done for Phase 1
-Database is fully imported with 10 tables in phpMyAdmin; `common/config.php` connects cleanly to MySQL; design tokens and shared header/bottom partials render correctly in mobile viewports.
+Database is fully imported with 10 tables in phpMyAdmin; admin bcrypt hash is provisioned; `common/config.php` connects cleanly to MySQL with JSON and rate-limit helpers; design tokens and shared header/bottom partials render correctly in mobile viewports.
 
 ---
 
@@ -199,10 +205,10 @@ Goal: Deliver a secure, password-authenticated desktop admin control panel where
 ### Tasks
 
 - [ ] **Task 5.1: Isolated Admin Authentication (`admin/login.php`)**
-  * **Build:** Create `admin/login.php` with dedicated styling (`assets/css/admin.css`). Authenticates against `admins` table using username and `password_verify()` against `password_hash`. Implements rate-limiting (locks IP after 5 failed attempts for 15 minutes) and sets isolated session variable `$_SESSION['admin_logged_in'] = true`. Create `admin/logout.php`.
+  * **Build:** Create `admin/login.php` with dedicated styling (`assets/css/admin.css`). Authenticates against `admins` table using username and `password_verify()` against `password_hash`. Uses the `checkRateLimit()` helper defined in `common/config.php` to lock the IP after 5 failed attempts for 15 minutes. Sets isolated session variable `$_SESSION['admin_logged_in'] = true`. Create `admin/logout.php`.
   * **Files Touched:** `admin/login.php`, `admin/logout.php`, `assets/css/admin.css`
-  * **Dependencies:** Task 1.3
-  * **Verification:** Set a known bcrypt password hash in `admins` table via phpMyAdmin. Open `https://example.com/admin/login.php` in browser, test invalid credentials (confirm error display), and submit valid credentials (confirm redirect to `admin/index.php`).
+  * **Dependencies:** Task 1.2b, Task 1.3
+  * **Verification:** Open `https://yourdomain.com/admin/login.php` in browser, test invalid credentials (confirm error display and rate limit increment in `rate_limits` table), and submit valid credentials with the password set in Task 1.2b (confirm redirect to `admin/index.php`).
 
 - [ ] **Task 5.2: Admin Shared Header, Sidebar & Layout Partials**
   * **Build:** Create `admin/common/header.php` and `admin/common/bottom.php`. Header enforces admin authentication gatekeeper, displays left sidebar navigation (Dashboard, Submissions Queue, All Apps, Users, System Config, Logout), and renders top metric cards.
@@ -332,14 +338,14 @@ Native Android app runs cleanly, browses catalog, searches with fallback, scans 
 
 ## Phase 8: Polish, Edge Cases & Production Launch
 
-Goal: Implement state handling across all components, enforce rate-limiting via MySQL, add privacy and terms pages, and execute the pre-launch deployment checklist.
+Goal: Connect rate limiting across all API endpoints using the config helper, audit all UI states across all components, add privacy and terms pages, and execute the pre-launch deployment checklist.
 
 ### Tasks
 
-- [ ] **Task 8.1: MySQL Table-Based API Rate Limiting**
-  * **Build:** Create helper function `checkRateLimit($ip, $endpoint, $limit, $windowSeconds)` in `common/config.php` utilizing the `rate_limits` table defined in Phase 1. Enforce limits on API endpoints (120/min for read, 60/min for search/updates, 10/min for reviews/reports). If exceeded, return standard HTTP 429 JSON response.
-  * **Files Touched:** `common/config.php`, `api/search.php`, `api/submit_review.php`, `api/report_app.php`
-  * **Dependencies:** Task 1.1, Task 1.2
+- [ ] **Task 8.1: API Rate Limiting Enforcement & Edge Cases**
+  * **Build:** Connect the existing `checkRateLimit()` helper from `common/config.php` across all public API endpoints (`api/search.php`, `api/check_updates.php`, `api/submit_review.php`, and `api/report_app.php`). Apply appropriate thresholds (120/min for read, 60/min for search/updates, 10/min for reviews/reports). If exceeded, return standard HTTP 429 JSON response with `RATE_LIMIT_EXCEEDED`.
+  * **Files Touched:** `api/search.php`, `api/check_updates.php`, `api/submit_review.php`, `api/report_app.php`
+  * **Dependencies:** Task 1.3, Phase 2, Phase 6
   * **Verification:** Script a loop calling `api/search.php` 65 times in under one minute from phone. Verify the 61st call returns HTTP 429 with error code `RATE_LIMIT_EXCEEDED`.
 
 - [ ] **Task 8.2: Comprehensive UI State Polish (Default, Loading, Error, Empty, Disabled)**

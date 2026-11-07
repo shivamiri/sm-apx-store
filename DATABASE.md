@@ -1,11 +1,11 @@
 # Database Specification: DATABASE.md
 
-**Document Version:** 1.0.0  
+**Document Version:** 1.1.0  
 **Target Platform:** MySQL 5.7+ / MariaDB 10.3+ (phpMyAdmin Import-Ready)  
-**Product Name:** SM Apx Store (Short: **Apx**)  
+**Product Name:** SM Apx Store (Short: Apx)  
 **Developer:** Shiva Miri  
-**Tagline:** *"Discover. Download. Explore."*  
-**Canonical References:** `PRD.md` (v1.1.0), `ARCHITECTURE.md` (v1.0.0)  
+**Tagline:** "Discover. Download. Explore."  
+**Canonical References:** PRD.md (v1.1.0), ARCHITECTURE.md (v1.0.0), PLAN.md (v1.0.0)  
 
 ---
 
@@ -13,61 +13,64 @@
 
 ### 1.1 Shared Hosting & phpMyAdmin Compatibility
 To run reliably on free shared hosting (such as InfinityFree or standard cPanel stacks):
-* **Storage Engine:** Strictly `ENGINE=InnoDB` across all tables for full transaction safety and foreign key referential integrity.
-* **Character Set & Collation:** `utf8mb4` with `utf8mb4_unicode_ci` to support emojis and multilingual app descriptions without truncation.
-* **No Privileged Routines:** Zero stored procedures, triggers, views, user-defined functions, or recurring events that are typically blocked or lack `SUPER` privileges on free shared MySQL instances.
-* **Standard SQL Import:** The schema is packaged as standard DDL statements that can be imported directly into phpMyAdmin without syntax failures.
+* Storage Engine: Strictly ENGINE=InnoDB across all tables for full transaction safety and foreign key referential integrity.
+* Character Set & Collation: utf8mb4 with utf8mb4_unicode_ci to support emojis and multilingual app descriptions without truncation.
+* No Privileged Routines: Zero stored procedures, triggers, views, user-defined functions, or recurring events that are typically blocked or lack SUPER privileges on free shared MySQL instances.
+* Standard SQL Import: The schema is packaged as standard DDL statements that can be imported directly into phpMyAdmin without syntax failures.
 
 ### 1.2 Table Inventory & Justifications
-The database contains 8 focused tables structured to fulfill all requirements from `PRD.md` and `ARCHITECTURE.md`:
-1. `users`: Stores Google OAuth authenticated public users and developers.
-2. `admins`: Completely separate administrative credentials table (keeps administrative security out of user space).
-3. `categories`: Normalized list of supported app categories, slug identifiers, and display ordering.
-4. `apps`: Stores all published and submitted applications, version metadata, external CDN links, size attributes, and review metrics.
-5. `app_submissions`: Dedicated queue table for version updates and submissions, enabling zero-downtime updates without breaking `package_name` uniqueness.
-6. `app_screenshots`: Normalized store of 1 to 8 screenshot URLs per app.
-7. `reviews`: One-review-per-user-per-app storage with ratings (1–5) and feedback comments.
-8. `reports`: Community flag records for malicious packages, broken links, or misleading descriptions.
-9. `system_settings`: Key-value storage for force update parameters (minimum version code, direct update link) and platform announcements.
+The database contains 10 focused tables structured to fulfill all requirements from PRD.md, ARCHITECTURE.md, and PLAN.md:
+1. users: Stores Google OAuth authenticated public users and developers.
+2. admins: Completely separate administrative credentials table (keeps administrative security out of user space).
+3. categories: Normalized list of supported app categories, slug identifiers, and display ordering.
+4. apps: Stores all published and submitted applications, version metadata, external CDN links, size attributes, and review metrics.
+5. app_submissions: Dedicated queue table for version updates and submissions, enabling zero-downtime updates without breaking package_name uniqueness.
+6. app_screenshots: Normalized store of 1 to 8 screenshot URLs per app.
+7. reviews: One-review-per-user-per-app storage with ratings (1–5) and feedback comments.
+8. reports: Community flag records for malicious packages, broken links, or misleading descriptions.
+9. system_settings: Key-value storage for force update parameters (minimum version code, direct update link) and platform announcements.
+10. rate_limits: Table-based rate-limiting tracker for public API endpoints and administrative endpoints.
 
 ---
 
 ## 2. Versioning & Zero-Downtime Update Tradeoff Analysis
 
 ### 2.1 The Architectural Challenge
-`PRD.md` and `ARCHITECTURE.md` require:
-1. `package_name` must be unique for public store indexing.
-2. When a developer submits an update (higher `version_code`) for an already **Live** app, the current version must remain **Live and fully downloadable** until the new version is reviewed and approved by the admin.
+PRD.md and ARCHITECTURE.md require:
+1. package_name must be unique for public store indexing.
+2. When a developer submits an update (higher version_code) for an already Live app, the current version must remain Live and fully downloadable until the new version is reviewed and approved by the admin.
 3. Fast device-wide package matching for the native app's update scanner.
 
-### 2.2 Selected Pattern: `apps` + `app_submissions` Queue
-* **Option Evaluated A (Single Table with Compound Status Keys):** Store every update as a separate row in `apps`.
-  * *Disadvantage:* `package_name` can no longer have a strict database-level `UNIQUE` constraint, complicating lookup speed, index cardinality, and foreign key relations from `reviews` and `reports`.
-* **Option Evaluated B (Normalized `apps` + `app_versions` for all history):**
-  * *Disadvantage:* Over-engineered for an MVP; requires two-table joins for every single public home screen shelf and detail lookup.
-* **Chosen Solution: Two-Table Lifecycle (`apps` + `app_submissions`):**
-  * `apps` holds the **active published state** of each application. `package_name` has a strict `UNIQUE` constraint for instantaneous index-driven lookups.
-  * `app_submissions` holds pending submissions and updates (`submission_type`: `'new'` or `'update'`).
-  * **When an update is submitted:** The existing record in `apps` continues serving users as `Live`. The update sits in `app_submissions` with status `'pending'`.
-  * **On Admin Approval:** The admin approves the submission $	o$ a simple transaction writes the new `version_code`, `version_name`, `apk_source_url`, `size_bytes`, `size_formatted`, and media URLs directly into `apps`, while marking the submission row as `'approved'`.
-  * **On Admin Rejection:** The row in `app_submissions` is marked `'rejected'` with an admin note; the live app in `apps` is untouched and continues serving users with zero downtime.
+### 2.2 Selected Pattern: apps + app_submissions Queue
+* Option Evaluated A (Single Table with Compound Status Keys): Store every update as a separate row in apps.
+  * Disadvantage: package_name can no longer have a strict database-level UNIQUE constraint, complicating lookup speed, index cardinality, and foreign key relations from reviews and reports.
+* Option Evaluated B (Normalized apps + app_versions for all history):
+  * Disadvantage: Over-engineered for an MVP; requires two-table joins for every single public home screen shelf and detail lookup.
+* Chosen Solution: Two-Table Lifecycle (apps + app_submissions):
+  * apps holds the active published state of each application. package_name has a strict UNIQUE constraint for instantaneous index-driven lookups.
+  * app_submissions holds pending submissions and updates (submission_type: 'new' or 'update').
+  * When an update is submitted: The existing record in apps continues serving users as Live. The update sits in app_submissions with status 'pending'.
+  * On Admin Approval: The admin approves the submission -> a simple transaction writes the new version_code, version_name, apk_source_url, size_bytes, size_formatted, and media URLs directly into apps, while marking the submission row as 'approved'.
+  * On Admin Rejection: The row in app_submissions is marked 'rejected' with an admin note; the live app in apps is untouched and continues serving users with zero downtime.
 
 ---
 
 ## 3. Soft Delete Strategy
 
-Soft deletion (`deleted_at TIMESTAMP NULL DEFAULT NULL`) is applied only where preserving historical relationships and audit integrity is mandatory:
+Soft deletion (deleted_at TIMESTAMP NULL DEFAULT NULL) is applied only where preserving historical relationships and audit integrity is mandatory:
 
 | Table | Soft Delete? | Rationale |
 | :--- | :---: | :--- |
-| `apps` | **YES** | If an app is removed or banned, reviews and abuse reports must not be orphaned or deleted. Allows admins to review past violations. |
-| `users` | **YES** | Preserves user identity for submitted reviews and submitted apps even if a user account is deactivated or banned. |
-| `reviews` | **YES** | Allows moderation of abusive reviews without breaking rating metric counts or foreign keys. |
-| `reports` | **NO** | Hard resolution workflow managed via explicit `status` (`'pending'`, `'resolved'`, `'dismissed'`). |
-| `app_submissions` | **NO** | Historical state is tracked directly via `status` (`'pending'`, `'approved'`, `'rejected'`). |
-| `admins` | **NO** | Superadmin manages admin accounts directly; revoked admins are deleted or locked. |
-| `categories` | **NO** | Static lookup data managed directly. |
-| `app_screenshots`| **NO** | Cascadable asset metadata tied directly to the parent app. |
+| apps | YES | If an app is removed or banned, reviews and abuse reports must not be orphaned or deleted. Allows admins to review past violations. |
+| users | YES | Preserves user identity for submitted reviews and submitted apps even if a user account is deactivated or banned. |
+| reviews | YES | Allows moderation of abusive reviews without breaking rating metric counts or foreign keys. |
+| reports | NO | Hard resolution workflow managed via explicit status ('pending', 'reviewed', 'dismissed'). |
+| app_submissions | NO | Historical state is tracked directly via status ('pending', 'approved', 'rejected'). |
+| admins | NO | Superadmin manages admin accounts directly; revoked admins are deleted or locked. |
+| categories | NO | Static lookup data managed directly. |
+| app_screenshots | NO | Cascadable asset metadata tied directly to the parent app. |
+| system_settings | NO | Configuration values overwritten or updated directly. |
+| rate_limits | NO | Ephemeral hit counters updated or overwritten directly based on sliding windows. |
 
 ---
 
@@ -206,217 +209,179 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
-```
 
----
+    RATE_LIMITS {
+        string ip_address PK
+        string endpoint PK
+        int hits
+        datetime window_start
+    }
 
-## 5. Detailed Table Specifications & Schemas
-
-### 5.1 `users`
+5. Detailed Table Specifications & Schemas
+5.1 users
 Stores all end users and indie developers signing in via Google OAuth.
-
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `google_id` | `VARCHAR(128)` | NO | - | Unique subject ID from Google OAuth |
-| `email` | `VARCHAR(255)` | NO | - | Developer/User Gmail address |
-| `display_name`| `VARCHAR(128)` | NO | - | Full name from Google profile |
-| `avatar_url` | `VARCHAR(512)` | YES | NULL | Google account profile picture URL |
-| `is_banned` | `TINYINT(1)` | NO | `0` | `1` = Banned by admin, `0` = Active |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Account creation timestamp |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Last profile update |
-| `deleted_at` | `TIMESTAMP` | YES | NULL | Soft delete indicator |
-
-* **Constraints:** `PRIMARY KEY (id)`, `UNIQUE KEY uq_users_google_id (google_id)`, `UNIQUE KEY uq_users_email (email)`.
-
----
-
-### 5.2 `admins`
-Isolated admin credentials for the desktop-only `/admin` control center. Kept strictly separate from public users.
-
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| google_id | VARCHAR(128) | NO | - | Unique subject ID from Google OAuth |
+| email | VARCHAR(255) | NO | - | Developer/User Gmail address |
+| display_name | VARCHAR(128) | NO | - | Full name from Google profile |
+| avatar_url | VARCHAR(512) | YES | NULL | Google account profile picture URL |
+| is_banned | TINYINT(1) | NO | 0 | 1 = Banned by admin, 0 = Active |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Account creation timestamp |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Last profile update |
+| deleted_at | TIMESTAMP | YES | NULL | Soft delete indicator |
+ * Constraints: PRIMARY KEY (id), UNIQUE KEY uq_users_google_id (google_id), UNIQUE KEY uq_users_email (email).
+5.2 admins
+Isolated admin credentials for the desktop-only /admin control center. Kept strictly separate from public users.
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `username` | `VARCHAR(64)` | NO | - | Unique login username |
-| `password_hash`| `VARCHAR(255)` | NO | - | Secure `PASSWORD_BCRYPT` hash |
-| `display_name`| `VARCHAR(128)` | NO | - | Admin screen display name |
-| `role` | `VARCHAR(32)` | NO | `'admin'` | Role identifier (`superadmin`, `admin`) |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Creation timestamp |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Modification timestamp |
-
-* **Constraints:** `PRIMARY KEY (id)`, `UNIQUE KEY uq_admins_username (username)`.
-
----
-
-### 5.3 `categories`
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| username | VARCHAR(64) | NO | - | Unique login username |
+| password_hash | VARCHAR(255) | NO | - | Secure PASSWORD_BCRYPT hash |
+| display_name | VARCHAR(128) | NO | - | Admin screen display name |
+| role | VARCHAR(32) | NO | 'admin' | Role identifier (superadmin, admin) |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Modification timestamp |
+ * Constraints: PRIMARY KEY (id), UNIQUE KEY uq_admins_username (username).
+5.3 categories
 Reference list for navigation shelves, filter pills, and search categorizations.
-
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `name` | `VARCHAR(64)` | NO | - | Category title (e.g., Tools, Games) |
-| `slug` | `VARCHAR(64)` | NO | - | URL-friendly slug (e.g., `tools`, `games`) |
-| `sort_order` | `INT` | NO | `0` | Order of appearance in category chip bar |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Creation timestamp |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Update timestamp |
-
-* **Constraints:** `PRIMARY KEY (id)`, `UNIQUE KEY uq_categories_slug (slug)`, `UNIQUE KEY uq_categories_name (name)`.
-
----
-
-### 5.4 `apps`
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| name | VARCHAR(64) | NO | - | Category title (e.g., Tools, Games) |
+| slug | VARCHAR(64) | NO | - | URL-friendly slug (e.g., tools, games) |
+| sort_order | INT | NO | 0 | Order of appearance in category chip bar |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Update timestamp |
+ * Constraints: PRIMARY KEY (id), UNIQUE KEY uq_categories_slug (slug), UNIQUE KEY uq_categories_name (name).
+5.4 apps
 The canonical live catalog. Holds active metadata, verified package identifiers, external CDN links, and precomputed review metrics.
-
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `user_id` | `INT UNSIGNED` | YES | NULL | Owner developer (`NULL` if Admin direct post) |
-| `category_id` | `INT UNSIGNED` | NO | - | Foreign Key to `categories` |
-| `app_name` | `VARCHAR(128)` | NO | - | App title (3-50 chars) |
-| `package_name`| `VARCHAR(191)` | NO | - | Unique Android package identifier |
-| `version_code`| `INT UNSIGNED` | NO | - | Integer version code for update checks |
-| `version_name`| `VARCHAR(32)` | NO | `'1.0.0'` | SemVer version string |
-| `apk_source_type` | `ENUM('github', 'gdrive')` | NO | `'github'` | Source CDN provider type |
-| `apk_source_url` | `TEXT` | NO | - | External public download URL |
-| `size_bytes` | `BIGINT UNSIGNED` | NO | `0` | Size in exact bytes |
-| `size_formatted` | `VARCHAR(32)` | NO | `'0 MB'` | Human-readable size (e.g., "18.4 MB") |
-| `icon_url` | `VARCHAR(512)` | NO | - | App squircle icon URL |
-| `feature_graphic_url` | `VARCHAR(512)` | NO | - | 16:9 banner graphic URL |
-| `youtube_url`| `VARCHAR(255)` | YES | NULL | Optional trailer/demo YouTube URL |
-| `description`| `TEXT` | NO | - | Detailed description and features |
-| `status` | `ENUM('Live', 'Pending', 'In Review', 'Rejected', 'Banned')` | NO | `'Pending'` | Publication state |
-| `is_admin_app`| `TINYINT(1)` | NO | `0` | `1` = Direct Admin app (`[Admin Verified]`) |
-| `is_featured` | `TINYINT(1)` | NO | `0` | `1` = Promoted on Home Featured carousel |
-| `download_count` | `INT UNSIGNED` | NO | `0` | Total recorded download button clicks |
-| `rating_average` | `DECIMAL(3,2)` | NO | `0.00` | Precomputed average rating (0.00 to 5.00) |
-| `review_count` | `INT UNSIGNED` | NO | `0` | Total approved reviews counter |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Creation timestamp |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Last updated timestamp |
-| `deleted_at` | `TIMESTAMP` | YES | NULL | Soft delete indicator |
-
-* **Constraints:** `PRIMARY KEY (id)`, `UNIQUE KEY uq_apps_package_name (package_name)`, `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL`, `FOREIGN KEY (category_id) REFERENCES categories(id)`.
-
----
-
-### 5.5 `app_submissions`
-Moderation queue for new app submissions and version updates. Solves zero-downtime updates while maintaining `apps.package_name` uniqueness.
-
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| user_id | INT UNSIGNED | YES | NULL | Owner developer (NULL if Admin direct post) |
+| category_id | INT UNSIGNED | NO | - | Foreign Key to categories |
+| app_name | VARCHAR(128) | NO | - | App title (3-50 chars) |
+| package_name | VARCHAR(191) | NO | - | Unique Android package identifier |
+| version_code | INT UNSIGNED | NO | - | Integer version code for update checks |
+| version_name | VARCHAR(32) | NO | '1.0.0' | SemVer version string |
+| apk_source_type | ENUM('github', 'gdrive') | NO | 'github' | Source CDN provider type |
+| apk_source_url | TEXT | NO | - | External public download URL |
+| size_bytes | BIGINT UNSIGNED | NO | 0 | Size in exact bytes |
+| size_formatted | VARCHAR(32) | NO | '0 MB' | Human-readable size (e.g., "18.4 MB") |
+| icon_url | VARCHAR(512) | NO | - | App squircle icon URL |
+| feature_graphic_url | VARCHAR(512) | NO | - | 16:9 banner graphic URL |
+| youtube_url | VARCHAR(255) | YES | NULL | Optional trailer/demo YouTube URL |
+| description | TEXT | NO | - | Detailed description and features |
+| status | ENUM('Live', 'Pending', 'In Review', 'Rejected', 'Banned') | NO | 'Pending' | Publication state |
+| is_admin_app | TINYINT(1) | NO | 0 | 1 = Direct Admin app ([Admin Verified]) |
+| is_featured | TINYINT(1) | NO | 0 | 1 = Promoted on Home Featured carousel |
+| download_count | INT UNSIGNED | NO | 0 | Total recorded download button clicks |
+| rating_average | DECIMAL(3,2) | NO | 0.00 | Precomputed average rating (0.00 to 5.00) |
+| review_count | INT UNSIGNED | NO | 0 | Total approved reviews counter |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Last updated timestamp |
+| deleted_at | TIMESTAMP | YES | NULL | Soft delete indicator |
+ * Constraints: PRIMARY KEY (id), UNIQUE KEY uq_apps_package_name (package_name), FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL, FOREIGN KEY (category_id) REFERENCES categories(id).
+5.5 app_submissions
+Moderation queue for new app submissions and version updates. Solves zero-downtime updates while maintaining apps.package_name uniqueness.
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `app_id` | `INT UNSIGNED` | YES | NULL | Target app if update (`NULL` if brand new) |
-| `user_id` | `INT UNSIGNED` | NO | - | Submitting developer |
-| `submission_type` | `ENUM('new', 'update')` | NO | `'new'` | Whether it is a new app or version upgrade |
-| `package_name`| `VARCHAR(191)` | NO | - | Intended Android package name |
-| `app_name` | `VARCHAR(128)` | NO | - | App title |
-| `category_id` | `INT UNSIGNED` | NO | - | Intended category |
-| `version_code`| `INT UNSIGNED` | NO | - | New version code to be evaluated |
-| `version_name`| `VARCHAR(32)` | NO | `'1.0.0'` | New version display name |
-| `apk_source_type` | `ENUM('github', 'gdrive')` | NO | `'github'` | Binary host provider |
-| `apk_source_url` | `TEXT` | NO | - | External release download link |
-| `size_bytes` | `BIGINT UNSIGNED` | NO | `0` | Detected or manual size in bytes |
-| `size_formatted` | `VARCHAR(32)` | NO | `'0 MB'` | Formatted size string |
-| `icon_url` | `VARCHAR(512)` | NO | - | App icon URL |
-| `feature_graphic_url` | `VARCHAR(512)` | NO | - | Feature banner URL |
-| `description`| `TEXT` | NO | - | Description / Changelog notes |
-| `youtube_url`| `VARCHAR(255)` | YES | NULL | Video link |
-| `status` | `ENUM('pending', 'in_review', 'approved', 'rejected')` | NO | `'pending'` | Review queue status |
-| `admin_notes`| `TEXT` | YES | NULL | Mandatory feedback note if rejected |
-| `reviewed_by`| `INT UNSIGNED` | YES | NULL | Admin ID who reviewed the submission |
-| `reviewed_at`| `TIMESTAMP` | YES | NULL | Approval or rejection timestamp |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Submission timestamp |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Update timestamp |
-
-* **Constraints:** `PRIMARY KEY (id)`, `FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE`, `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`, `FOREIGN KEY (reviewed_by) REFERENCES admins(id) ON DELETE SET NULL`.
-
----
-
-### 5.6 `app_screenshots`
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| app_id | INT UNSIGNED | YES | NULL | Target app if update (NULL if brand new) |
+| user_id | INT UNSIGNED | NO | - | Submitting developer |
+| submission_type | ENUM('new', 'update') | NO | 'new' | Whether it is a new app or version upgrade |
+| package_name | VARCHAR(191) | NO | - | Intended Android package name |
+| app_name | VARCHAR(128) | NO | - | App title |
+| category_id | INT UNSIGNED | NO | - | Intended category |
+| version_code | INT UNSIGNED | NO | - | New version code to be evaluated |
+| version_name | VARCHAR(32) | NO | '1.0.0' | New version display name |
+| apk_source_type | ENUM('github', 'gdrive') | NO | 'github' | Binary host provider |
+| apk_source_url | TEXT | NO | - | External release download link |
+| size_bytes | BIGINT UNSIGNED | NO | 0 | Detected or manual size in bytes |
+| size_formatted | VARCHAR(32) | NO | '0 MB' | Formatted size string |
+| icon_url | VARCHAR(512) | NO | - | App icon URL |
+| feature_graphic_url | VARCHAR(512) | NO | - | Feature banner URL |
+| description | TEXT | NO | - | Description / Changelog notes |
+| youtube_url | VARCHAR(255) | YES | NULL | Video link |
+| status | ENUM('pending', 'in_review', 'approved', 'rejected') | NO | 'pending' | Review queue status |
+| admin_notes | TEXT | YES | NULL | Mandatory feedback note if rejected |
+| reviewed_by | INT UNSIGNED | YES | NULL | Admin ID who reviewed the submission |
+| reviewed_at | TIMESTAMP | YES | NULL | Approval or rejection timestamp |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Submission timestamp |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Update timestamp |
+ * Constraints: PRIMARY KEY (id), FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (category_id) REFERENCES categories(id), FOREIGN KEY (reviewed_by) REFERENCES admins(id) ON DELETE SET NULL.
+5.6 app_screenshots
 Stores normalized screenshot URLs (1 to 8 images per app) displayed in the app details gallery.
-
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `app_id` | `INT UNSIGNED` | NO | - | Target application ID |
-| `screenshot_url` | `VARCHAR(512)` | NO | - | Hosted HTTPS image URL |
-| `sort_order` | `TINYINT UNSIGNED` | NO | `0` | Order of appearance (0 to 7) |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Record creation timestamp |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Last update |
-
-* **Constraints:** `PRIMARY KEY (id)`, `FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE`.
-
----
-
-### 5.7 `reviews`
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| app_id | INT UNSIGNED | NO | - | Target application ID |
+| screenshot_url | VARCHAR(512) | NO | - | Hosted HTTPS image URL |
+| sort_order | TINYINT UNSIGNED | NO | 0 | Order of appearance (0 to 7) |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Record creation timestamp |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Last update |
+ * Constraints: PRIMARY KEY (id), FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE.
+5.7 reviews
 Stores user ratings and text reviews. Strictly enforced to 1 review per user per app.
-
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `app_id` | `INT UNSIGNED` | NO | - | Reviewed application |
-| `user_id` | `INT UNSIGNED` | NO | - | Review author |
-| `rating` | `TINYINT UNSIGNED` | NO | - | Star rating (1 to 5) |
-| `comment` | `TEXT` | NO | - | User written feedback |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Date written |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Date edited |
-| `deleted_at` | `TIMESTAMP` | YES | NULL | Soft delete for moderation |
-
-* **Constraints:** `PRIMARY KEY (id)`, `UNIQUE KEY uq_reviews_app_user (app_id, user_id)`, `FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE`, `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`.
-
----
-
-### 5.8 `reports`
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| app_id | INT UNSIGNED | NO | - | Reviewed application |
+| user_id | INT UNSIGNED | NO | - | Review author |
+| rating | TINYINT UNSIGNED | NO | - | Star rating (1 to 5) |
+| comment | TEXT | NO | - | User written feedback |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Date written |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Date edited |
+| deleted_at | TIMESTAMP | YES | NULL | Soft delete for moderation |
+ * Constraints: PRIMARY KEY (id), UNIQUE KEY uq_reviews_app_user (app_id, user_id), FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE.
+5.8 reports
 Community abuse reports submitted against malicious apps, broken links, or inappropriate content.
-
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `app_id` | `INT UNSIGNED` | NO | - | Flagged application |
-| `reporter_ip`| `VARCHAR(45)` | NO | - | IPv4 / IPv6 of reporter for rate limiting |
-| `reason` | `VARCHAR(255)` | NO | - | Short reason (Malware, Broken Link, Scam) |
-| `details` | `TEXT` | YES | NULL | Elaborated feedback |
-| `status` | `ENUM('pending', 'reviewed', 'dismissed')` | NO | `'pending'` | Moderation handling status |
-| `admin_notes`| `TEXT` | YES | NULL | Action notes by reviewing admin |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Time reported |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Last updated |
-
-* **Constraints:** `PRIMARY KEY (id)`, `FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE`.
-
----
-
-### 5.9 `system_settings`
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| app_id | INT UNSIGNED | NO | - | Flagged application |
+| reporter_ip | VARCHAR(45) | NO | - | IPv4 / IPv6 of reporter for rate limiting |
+| reason | VARCHAR(255) | NO | - | Short reason (Malware, Broken Link, Scam) |
+| details | TEXT | YES | NULL | Elaborated feedback |
+| status | ENUM('pending', 'reviewed', 'dismissed') | NO | 'pending' | Moderation handling status |
+| admin_notes | TEXT | YES | NULL | Action notes by reviewing admin |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Time reported |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Last updated |
+ * Constraints: PRIMARY KEY (id), FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE.
+5.9 system_settings
 Global key-value configuration storage for force updates and broadcast announcements.
-
 | Column | Type | Nullable | Default | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `id` | `INT UNSIGNED AUTO_INCREMENT` | NO | - | Primary Key |
-| `setting_key` | `VARCHAR(64)` | NO | - | Unique configuration identifier |
-| `setting_value` | `TEXT` | NO | - | Serialized or plain string value |
-| `created_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP` | Creation timestamp |
-| `updated_at` | `TIMESTAMP` | NO | `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | Modification timestamp |
-
-* **Constraints:** `PRIMARY KEY (id)`, `UNIQUE KEY uq_settings_key (setting_key)`.
-
----
-
-## 6. Query Optimization & Indexing Strategy
-
+|---|---|---|---|---|
+| id | INT UNSIGNED AUTO_INCREMENT | NO | - | Primary Key |
+| setting_key | VARCHAR(64) | NO | - | Unique configuration identifier |
+| setting_value | TEXT | NO | - | Serialized or plain string value |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Modification timestamp |
+ * Constraints: PRIMARY KEY (id), UNIQUE KEY uq_settings_key (setting_key).
+5.10 rate_limits
+Sliding window hit tracker for API rate-limiting and administrative login protection.
+| Column | Type | Nullable | Default | Description |
+|---|---|---|---|---|
+| ip_address | VARCHAR(45) | NO | - | Client IPv4 or IPv6 address |
+| endpoint | VARCHAR(100) | NO | - | Normalized API endpoint or action key |
+| hits | INT UNSIGNED | NO | 1 | Request hits count within the current window |
+| window_start | DATETIME | NO | - | Timestamp marking current rate-limit window start |
+ * Constraints: PRIMARY KEY (ip_address, endpoint), INDEX idx_rate_limits_window (window_start).
+6. Query Optimization & Indexing Strategy
 Free shared MySQL environments have limited CPU cycles. The schema defines targeted composite indexes for all high-volume queries:
-
-### 6.1 Device-Wide Update Check Query
+6.1 Device-Wide Update Check Query
 The native Android app sends all installed package names and version codes.
-```sql
 SELECT package_name, version_code, version_name, apk_source_url, size_formatted
 FROM apps
 WHERE package_name IN (?, ?, ...)
   AND status = 'Live'
   AND deleted_at IS NULL;
-```
-* **Dedicated Index:** `idx_apps_pkg_status (package_name, status, version_code, deleted_at)`
-* *Benefit:* Covering index allows MySQL to resolve update comparisons directly from the index tree without table scanning.
 
-### 6.2 Shelf Feeds (Home Screen)
-```sql
+ * Dedicated Index: idx_apps_pkg_status (package_name, status, version_code, deleted_at)
+ * Benefit: Covering index allows MySQL to resolve update comparisons directly from the index tree without table scanning.
+6.2 Shelf Feeds (Home Screen)
 -- Featured
 SELECT * FROM apps WHERE status = 'Live' AND is_featured = 1 AND deleted_at IS NULL LIMIT 5;
 
@@ -428,41 +393,35 @@ SELECT * FROM apps WHERE status = 'Live' AND deleted_at IS NULL ORDER BY rating_
 
 -- Hot Today (Downloads)
 SELECT * FROM apps WHERE status = 'Live' AND deleted_at IS NULL ORDER BY download_count DESC LIMIT 10;
-```
-* **Dedicated Indexes:**
-  * `idx_apps_status_featured (status, is_featured, deleted_at)`
-  * `idx_apps_status_created (status, deleted_at, created_at)`
-  * `idx_apps_status_rating (status, deleted_at, rating_average)`
-  * `idx_apps_status_downloads (status, deleted_at, download_count)`
 
-### 6.3 3-Tier Search & Fallback Engine
-Shared hosting environments frequently disable or lock InnoDB FULLTEXT parameters or minimum word lengths. To guarantee 100% reliability, search indexing uses both LIKE-friendly prefix indexes and InnoDB `FULLTEXT`:
-* `FULLTEXT idx_apps_search (app_name, description)` (for broad token matching).
-* `INDEX idx_apps_name (app_name)` (for fast prefix `app_name LIKE 'query%'`).
-* `INDEX idx_apps_category_status (category_id, status, deleted_at)` (for Tier-2 category fallback lookups).
+ * Dedicated Indexes:
+   * idx_apps_status_featured (status, is_featured, deleted_at)
+   * idx_apps_status_created (status, deleted_at, created_at)
+   * idx_apps_status_rating (status, deleted_at, rating_average)
+   * idx_apps_status_downloads (status, deleted_at, download_count)
+6.3 3-Tier Search & Fallback Engine
+Shared hosting environments frequently disable or lock InnoDB FULLTEXT parameters or minimum word lengths. To guarantee 100% reliability, search indexing uses both LIKE-friendly prefix indexes and InnoDB FULLTEXT:
+ * FULLTEXT idx_apps_search (app_name, description) (for broad token matching).
+ * INDEX idx_apps_name (app_name) (for fast prefix app_name LIKE 'query%').
+ * INDEX idx_apps_category_status (category_id, status, deleted_at) (for Tier-2 category fallback lookups).
+6.4 Rate Limiting Window Invalidation
+SELECT hits, window_start FROM rate_limits WHERE ip_address = ? AND endpoint = ?;
+DELETE FROM rate_limits WHERE window_start < ?;
 
----
-
-## 7. Application-Level Data Access Rules (PHP Layer)
-
+ * Dedicated Index: idx_rate_limits_window (window_start)
+ * Benefit: Ensures background pruning or range checking on expired rate-limit windows completes without scanning the full table.
+7. Application-Level Data Access Rules (PHP Layer)
 Because MySQL does not provide native Row-Level Security (RLS) on shared hosting, security constraints are enforced at the Core PHP layer using prepared statements and session boundaries:
-
 | Entity / Action | Public / Anonymous | Developer Owner | Superadmin / Admin |
-| :--- | :--- | :--- | :--- |
-| **View Catalog / App Details** | Allowed for `status = 'Live'` and `deleted_at IS NULL`. | Allowed for any of their own apps, regardless of status. | Full access to all records across all statuses. |
-| **Download APK Link** | Allowed for Live apps. Server provides external URL. | Allowed for their own apps. | Allowed for moderation testing. |
-| **Submit New App / Version** | Forbidden (redirects to Google Sign-In). | Allowed. Enforces `user_id = $_SESSION['user_id']`. | Allowed via direct admin upload (`is_admin_app = 1`). |
-| **Edit Metadata** | Forbidden. | Allowed only for their own `app_submissions` rows with status `pending`. | Full update authority on all records. |
-| **Write Review** | Forbidden (requires Google Sign-In). | Allowed on apps other than their own (cannot review own app). | Moderation / deletion authority. |
-| **Approve / Reject / Ban** | Forbidden. | Forbidden. | Admin only via protected `$_SESSION['admin_logged_in']`. |
-
----
-
-## 8. Complete Migration Script (Clean phpMyAdmin Import)
-
+|---|---|---|---|
+| View Catalog / App Details | Allowed for status = 'Live' and deleted_at IS NULL. | Allowed for any of their own apps, regardless of status. | Full access to all records across all statuses. |
+| Download APK Link | Allowed for Live apps. Server provides external URL. | Allowed for their own apps. | Allowed for moderation testing. |
+| Submit New App / Version | Forbidden (redirects to Google Sign-In). | Allowed. Enforces user_id = $_SESSION['user_id']. | Allowed via direct admin upload (is_admin_app = 1). |
+| Edit Metadata | Forbidden. | Allowed only for their own app_submissions rows with status pending. | Full update authority on all records. |
+| Write Review | Forbidden (requires Google Sign-In). | Allowed on apps other than their own (cannot review own app). | Moderation / deletion authority. |
+| Approve / Reject / Ban | Forbidden. | Forbidden. | Admin only via protected $_SESSION['admin_logged_in']. |
+8. Complete Migration Script (Clean phpMyAdmin Import)
 The SQL script below creates the entire database structure in the correct dependency order.
-
-```sql
 -- ============================================================================
 -- SM Apx Store (Apx) - Complete Database Schema
 -- Developer: Shiva Miri
@@ -677,14 +636,22 @@ CREATE TABLE `system_settings` (
   UNIQUE KEY `uq_settings_key` (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ----------------------------------------------------------------------------
+-- 10. Table: rate_limits
+-- ----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `rate_limits`;
+CREATE TABLE `rate_limits` (
+  `ip_address` VARCHAR(45) NOT NULL,
+  `endpoint` VARCHAR(100) NOT NULL,
+  `hits` INT UNSIGNED NOT NULL DEFAULT 1,
+  `window_start` DATETIME NOT NULL,
+  PRIMARY KEY (`ip_address`, `endpoint`),
+  INDEX `idx_rate_limits_window` (`window_start`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
-```
 
----
-
-## 9. Seed Data (Development & Staging)
-
-```sql
+9. Seed Data (Development & Staging)
 -- ============================================================================
 -- Seed Data for SM Apx Store
 -- ============================================================================
@@ -738,15 +705,9 @@ INSERT INTO `reviews` (`app_id`, `user_id`, `rating`, `comment`) VALUES
 -- 9. Sample Report
 INSERT INTO `reports` (`app_id`, `reporter_ip`, `reason`, `details`, `status`) VALUES
 (2, '192.168.1.45', 'False Version Display', 'The changelog specifies v2.1.0 but the internal app settings screen reports v2.0.9.', 'pending');
-```
 
----
-
-## 10. Sequential Migration & Import Order
-
+10. Sequential Migration & Import Order
 When importing or executing migrations manually through phpMyAdmin or CLI, execute tables strictly in the order of foreign key dependency:
-
-```
 1. users             (Zero dependencies)
 2. admins            (Zero dependencies)
 3. categories        (Zero dependencies)
@@ -756,7 +717,6 @@ When importing or executing migrations manually through phpMyAdmin or CLI, execu
 7. app_screenshots  (Depends on apps)
 8. reviews          (Depends on apps, users)
 9. reports          (Depends on apps)
-```
+10. rate_limits      (Zero dependencies)
 
----
-*End of Database Specification. Preserved in repository root as `DATABASE.md`.*
+End of Database Specification. Preserved in repository root as DATABASE.md.

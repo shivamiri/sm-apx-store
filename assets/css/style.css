@@ -1,0 +1,178 @@
+/* SM Apx Store - Design System (Task 1.4) */
+:root,
+[data-theme="dark"] {
+  --bg-base: #070B14;
+  --bg-surface: #0D1527;
+  --bg-surface-elevated: #131F38;
+  --bg-surface-hover: #1A2A4C;
+  --border-subtle: #1E2D4A;
+  --border-focused: #00E5FF;
+  --accent-primary: #00E5FF;
+  --accent-secondary: #0070F3;
+  --accent-gradient-start: #00E5FF;
+  --accent-gradient-end: #0070F3;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-tertiary: #64748B;
+  --status-success: #10B981;
+  --status-warning: #F59E0B;
+  --status-error: #EF4444;
+  --status-admin: #8B5CF6;
+  --btn-primary-text: #070B14;
+  --shadow-1: 0 2px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+  --shadow-2: 0 12px 32px rgba(0,0,0,.70), 0 0 0 1px #1E2D4A;
+  --shadow-glow: 0 0 16px rgba(0,229,255,.35);
+}
+
+[data-theme="light"] {
+  --bg-base: #F4F7FC;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #E8EEF8;
+  --bg-surface-hover: #DCE5F5;
+  --border-subtle: #CBD5E1;
+  --border-focused: #0070F3;
+  --accent-primary: #0099B8;
+  --accent-secondary: #0055B8;
+  --accent-gradient-start: #00B8D9;
+  --accent-gradient-end: #0052CC;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --status-success: #059669;
+  --status-warning: #D97706;
+  --status-error: #DC2626;
+  --status-admin: #7C3AED;
+  --btn-primary-text: #FFFFFF;
+  --shadow-1: 0 2px 8px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --shadow-2: 0 12px 32px rgba(15,23,42,.12), 0 0 0 1px #CBD5E1;
+}
+
+:root {
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-icon: 22%;
+  --radius-full: 9999px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+a { color: var(--accent-primary); text-decoration: none; }
+
+/* Typography */
+.display-1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; }
+.heading-1 { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; }
+.heading-2 { font-size: 18px; line-height: 24px; font-weight: 600; }
+.heading-3 { font-size: 15px; line-height: 20px; font-weight: 600; }
+.body-large { font-size: 15px; line-height: 22px; font-weight: 400; }
+.body-default { font-size: 13px; line-height: 18px; font-weight: 400; }
+.body-medium { font-size: 13px; line-height: 18px; font-weight: 500; }
+.caption {
+  font-family: var(--font-mono);
+  font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+.micro { font-size: 10px; line-height: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+
+/* Layout */
+.container { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 var(--space-4); }
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-1);
+}
+.card:hover, .card:focus-within { border-color: var(--border-focused); }
+
+/* App icon (squircle) */
+.app-icon {
+  width: 64px; height: 64px;
+  border-radius: var(--radius-icon);
+  object-fit: cover;
+  background: var(--bg-surface-elevated);
+  flex-shrink: 0;
+}
+.app-icon-sm { width: 48px; height: 48px; }
+.app-icon-lg { width: 96px; height: 96px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 44px; padding: 0 var(--space-5);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border-subtle);
+  background: transparent; color: var(--text-primary);
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-gradient-start) 0%, var(--accent-gradient-end) 100%);
+  color: var(--btn-primary-text); font-weight: 700;
+  border: 1px solid rgba(255,255,255,.2);
+}
+.btn-primary:hover { box-shadow: var(--shadow-glow); transform: scale(1.01); }
+.btn:active { transform: scale(.98); opacity: .92; }
+.btn:disabled, .btn[disabled] {
+  background: #1E2D4A; color: #64748B; border: none; cursor: not-allowed; box-shadow: none; transform: none;
+}
+
+/* Inputs */
+.input {
+  width: 100%; height: 44px; padding: 0 var(--space-3);
+  background: var(--bg-surface); color: var(--text-primary);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  font-family: var(--font-sans); font-size: 13px;
+}
+.input::placeholder { color: var(--text-tertiary); }
+.input:focus { outline: none; border-color: var(--border-focused); }
+
+/* Chips & status pills */
+.chip {
+  display: inline-flex; align-items: center; padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full); border: 1px solid var(--border-subtle);
+  background: var(--bg-surface); color: var(--text-secondary); font-size: 13px;
+}
+.chip.active { border-color: var(--border-focused); color: var(--accent-primary); }
+
+.pill {
+  display: inline-block; padding: 2px var(--space-2);
+  border-radius: var(--radius-xs);
+  font-size: 10px; line-height: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+}
+.pill-live { color: var(--status-success); border: 1px solid var(--status-success); }
+.pill-pending { color: var(--status-warning); border: 1px solid var(--status-warning); }
+.pill-error { color: var(--status-error); border: 1px solid var(--status-error); }
+.pill-admin { color: var(--status-admin); border: 1px solid var(--status-admin); }
+
+/* Responsive */
+@media (min-width: 640px) {
+  .container { padding: 0 var(--space-6); }
+}
+@media (min-width: 1024px) {
+  .container { padding: 0 var(--space-8); }
+}

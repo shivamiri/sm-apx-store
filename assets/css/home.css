@@ -1,0 +1,78 @@
+/* SM Apx Store - home page (Task 2.3) */
+.chip-row {
+  display: flex; gap: var(--space-2); overflow-x: auto;
+  padding-bottom: var(--space-3); margin-bottom: var(--space-3);
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+.chip-row .chip { white-space: nowrap; flex-shrink: 0; }
+
+.hero-row {
+  display: flex; gap: var(--space-3); overflow-x: auto;
+  scroll-snap-type: x mandatory; margin-bottom: var(--space-6);
+  scrollbar-width: none;
+}
+.hero-row::-webkit-scrollbar { display: none; }
+.hero {
+  position: relative; flex: 0 0 88%; aspect-ratio: 16 / 9;
+  scroll-snap-align: start; border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  background-size: cover; background-position: center;
+  border: 1px solid var(--border-subtle); overflow: hidden; color: #F8FAFC;
+}
+.hero-overlay {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  background: linear-gradient(to top, rgba(7,11,20,.92), rgba(7,11,20,0));
+}
+
+.shelf { margin-bottom: var(--space-6); }
+.shelf .heading-2 { margin: 0 0 var(--space-3); }
+.shelf-row {
+  display: flex; gap: var(--space-3); overflow-x: auto; scrollbar-width: none;
+  padding-bottom: var(--space-1);
+}
+.shelf-row::-webkit-scrollbar { display: none; }
+.shelf-row .app-card { flex: 0 0 120px; }
+
+.app-grid {
+  display: grid; gap: var(--space-3);
+  grid-template-columns: repeat(2, 1fr);
+}
+.app-card {
+  display: flex; flex-direction: column; gap: var(--space-1);
+  padding: var(--space-3); color: var(--text-primary);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-1);
+}
+.app-card:active { border-color: var(--border-focused); }
+.app-card .app-icon { width: 64px; height: 64px; margin-bottom: var(--space-1); }
+.app-card-title {
+  font-size: 13px; font-weight: 600; line-height: 18px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-card-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: var(--space-2);
+}
+.size-pill {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  color: var(--text-secondary); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs); padding: 2px 6px;
+}
+.get-btn {
+  font-size: 11px; font-weight: 700; color: var(--btn-primary-text);
+  background: linear-gradient(135deg, var(--accent-gradient-start), var(--accent-gradient-end));
+  border-radius: var(--radius-full); padding: 4px 12px;
+}
+
+@media (min-width: 640px) {
+  .app-grid { grid-template-columns: repeat(3, 1fr); }
+  .hero { flex-basis: 60%; }
+}
+@media (min-width: 1024px) {
+  .app-grid { grid-template-columns: repeat(4, 1fr); }
+  .hero { flex-basis: 40%; }
+}
+
+.hero .caption { color: #CBD5E1; }

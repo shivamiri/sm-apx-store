@@ -37,3 +37,26 @@
   .shot { height: 400px; }
   .get-main { width: 240px; }
 }
+
+/* Direct-download instruction sheet. Reuses the current light/dark tokens. */
+.download-link { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; text-decoration: none; }
+.download-link[aria-disabled="true"] { opacity: .65; cursor: wait; }
+.download-note { margin: calc(-1 * var(--space-2)) 0 var(--space-4); }
+.download-warning { color: var(--status-warning); margin: 0 0 var(--space-4); }
+.download-overlay[hidden] { display: none; }
+.download-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; background: rgba(7, 11, 20, .80); padding: 16px 16px 0; box-sizing: border-box; backdrop-filter: blur(8px); }
+.download-sheet { position: relative; width: 100%; max-width: 540px; max-height: calc(100dvh - 32px); overflow-y: auto; box-sizing: border-box; padding: 14px 24px max(24px, env(safe-area-inset-bottom)); border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: 16px 16px 0 0; background: var(--bg-surface-elevated); color: var(--text-primary); box-shadow: 0 12px 32px rgba(0, 0, 0, .35); }
+.download-handle { width: 36px; height: 4px; margin: 0 auto 28px; border-radius: 9999px; background: var(--text-tertiary); }
+.download-close { position: absolute; right: 10px; top: 20px; min-width: 44px; min-height: 44px; }
+.download-eyebrow { color: var(--accent-primary); padding-right: 32px; letter-spacing: .06em; margin: 0 0 12px; }
+.download-sheet h2 { margin: 0 0 12px; padding-right: 20px; }
+.download-sheet .body-default { color: var(--text-secondary); line-height: 1.6; margin: 0 0 16px; }
+.download-safety { color: var(--text-secondary); line-height: 1.6; margin: 0 0 16px; }
+.download-status { color: var(--text-secondary); line-height: 1.5; }
+.download-status:empty { display: none; }
+.download-sheet > .btn { width: 100%; min-height: 44px; margin-top: 8px; }
+.download-sheet button:focus-visible, .download-link:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+@media (min-width: 768px) {
+  .download-overlay { align-items: center; padding: 24px; }
+  .download-sheet { border-bottom: 1px solid var(--border-subtle); border-radius: 12px; }
+}

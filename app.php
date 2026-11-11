@@ -1,6 +1,99 @@
 <?php
 require_once __DIR__ . '/common/config.php';
 
+/** Validate source URLs without fetching or proxying any APK bytes. */
+function downloadUrl(string $url): string
+{
+    $parts = parse_url(trim($url));
+    if (!$parts || strtolower($parts['scheme'] ?? '') !== 'https'
+        || isset($parts['user']) || isset($parts['pass']) || isset($parts['port'])) {
+        return '';
+    }
+    $host = strtolower($parts['host'] ?? '');
+    $path = $parts['path'] ?? '';
+    if ($host === 'github.com'
+        && preg_match('~^/[^/]+/[^/]+/releases/download/[^/]+/[^/]+\.apk$~i', $path)) {
+        return trim($url);
+    }
+    if ($host === 'drive.google.com') {
+        // Public Drive links can still show a quota or confirmation page.
+        $fileId = '';
+        if (preg_match('~^/file/d/([A-Za-z0-9_-]+)(?:/|$)~', $path, $m)) {
+            $fileId = $m[1];
+        } elseif ($path === '/uc' || $path === '/open') {
+            parse_str($parts['query'] ?? '', $query);
+            if (isset($query['id']) && is_string($query['id'])
+                && preg_match('~^[A-Za-z0-9_-]+$~', $query['id'])) {
+                $fileId = $query['id'];
+            }
+        }
+        if ($fileId !== '') {
+            return 'https://drive.google.com/uc?export=download&id=' . rawurlencode($fileId);
+        }
+    }
+    return '';
+}
+
+if (!isset($_SESSION['download_csrf'])) {
+    $_SESSION['download_csrf'] = bin2hex(random_bytes(32));
+}
+
+// This endpoint records button clicks only. It never serves an APK or redirects.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    header('Cache-Control: no-store');
+    $csrf = $_POST['csrf'] ?? '';
+    $appId = $_POST['app_id'] ?? '';
+    $requestId = $_POST['request_id'] ?? '';
+    if (!is_string($csrf) || !hash_equals($_SESSION['download_csrf'], $csrf)) {
+        jsonResponse(false, null, 'Please reload the page and try again.', 403);
+    }
+    if (!is_string($appId) || !ctype_digit($appId) || (int) $appId < 1
+        || !is_string($requestId) || !preg_match('~^[a-f0-9]{32}$~', $requestId)
+        || ($_POST['action'] ?? '') !== 'download_click') {
+        jsonResponse(false, null, 'Invalid download request.', 400);
+    }
+    try {
+        $pdo = getDbConnection();
+        $stmt = $pdo->prepare("SELECT apk_source_url FROM apps WHERE id = :id AND status = 'Live' AND deleted_at IS NULL LIMIT 1");
+        $stmt->execute([':id' => (int) $appId]);
+        $source = $stmt->fetchColumn();
+        if ($source === false || downloadUrl((string) $source) === '') {
+            jsonResponse(false, null, 'Download is not available.', 404);
+        }
+        // Session writes are serialized by PHP. Repeated request IDs count once.
+        $recent = $_SESSION['download_clicks'] ?? [];
+        $now = time();
+        foreach ($recent as $key => $item) {
+            if ($item['at'] < $now - 600) { unset($recent[$key]); }
+        }
+        $key = $appId . ':' . $requestId;
+        if (!isset($recent[$key])) {
+            if (!checkRateLimit($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0', 'download_click', 20, 60)) {
+                jsonResponse(false, null, 'Too many download clicks. Please wait a minute.', 429);
+            }
+            $stmt = $pdo->prepare("UPDATE apps SET download_count = download_count + 1 WHERE id = :id AND status = 'Live' AND deleted_at IS NULL");
+            $stmt->execute([':id' => (int) $appId]);
+            if ($stmt->rowCount() !== 1) {
+                jsonResponse(false, null, 'App is no longer available.', 404);
+            }
+            $recent[$key] = ['at' => $now];
+            $_SESSION['download_clicks'] = array_slice($recent, -100, null, true);
+        }
+        $stmt = $pdo->prepare("SELECT download_count FROM apps WHERE id = :id AND status = 'Live' AND deleted_at IS NULL");
+        $stmt->execute([':id' => (int) $appId]);
+        $count = $stmt->fetchColumn();
+        jsonResponse(true, ['download_count' => (int) $count], null);
+    } catch (Throwable $e) {
+        jsonResponse(false, null, 'Could not record the download click.', 500);
+    }
+}
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+    header('Allow: GET, POST');
+    http_response_code(405);
+    exit;
+}
+header('Cache-Control: no-store');
+
 function e($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); }
 
 function youtubeId(?string $url): string
@@ -39,7 +132,7 @@ if (($id !== '' && ctype_digit($id)) || ($id === '' && $pkg !== '' && strlen($pk
     $pdo = getDbConnection();
     $sql = "SELECT a.id, a.app_name, a.package_name, a.version_name, a.size_formatted,
                    a.icon_url, a.youtube_url, a.description, a.is_admin_app,
-                   a.download_count, a.rating_average, a.review_count, a.created_at,
+                   a.download_count, a.rating_average, a.review_count, a.created_at, a.apk_source_url,
                    c.name AS category_name, u.display_name AS developer_name
             FROM apps a
             JOIN categories c ON c.id = a.category_id
@@ -77,7 +170,7 @@ if (!$app) {
 $page_title = $app ? $app['app_name'] . ' - ' . APP_NAME : 'App not found - ' . APP_NAME;
 require_once __DIR__ . '/common/header.php';
 ?>
-<link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/app.css">
+<link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/app.css?v=3.1.1">
 
 <?php if (!$app): ?>
   <section class="notfound">
@@ -89,6 +182,8 @@ require_once __DIR__ . '/common/header.php';
   $ytId = youtubeId($app['youtube_url']);
   $desc = (string) $app['description'];
   $long = strlen($desc) > 220;
+  $download = downloadUrl((string) $app['apk_source_url']);
+  $isDrive = $download !== '' && parse_url($download, PHP_URL_HOST) === 'drive.google.com';
 ?>
   <section class="app-head">
     <img class="app-head-icon" src="<?php echo e($app['icon_url']); ?>" alt="">
@@ -103,10 +198,39 @@ require_once __DIR__ . '/common/header.php';
     <div class="spec"><div class="spec-val"><?php echo number_format((float) $app['rating_average'], 1); ?> &#9733;</div><div class="caption"><?php echo (int) $app['review_count']; ?> reviews</div></div>
     <div class="spec"><div class="spec-val"><?php echo e($app['size_formatted']); ?></div><div class="caption">Size</div></div>
     <div class="spec"><div class="spec-val"><?php echo e(appAge($app['created_at'])); ?></div><div class="caption">Age</div></div>
-    <div class="spec"><div class="spec-val"><?php echo e(formatCount((int) $app['download_count'])); ?></div><div class="caption">Downloads</div></div>
+    <div class="spec"><div class="spec-val"><span id="downloadCount"><?php echo e(formatCount((int) $app['download_count'])); ?></span></div><div class="caption">Downloads</div></div>
   </section>
 
-  <button class="btn btn-primary get-main" type="button" disabled title="Download is added in Phase 3">GET</button>
+  <?php if ($download !== ''): ?>
+    <a class="btn btn-primary get-main download-link" id="downloadButton"
+       href="<?php echo e($download); ?>" target="_self" rel="noopener noreferrer"
+       data-app-id="<?php echo (int) $app['id']; ?>"
+       data-csrf="<?php echo e($_SESSION['download_csrf']); ?>"
+       data-endpoint="<?php echo e(SITE_URL . '/app.php'); ?>"
+       aria-haspopup="dialog" aria-controls="downloadSheet">Download APK</a>
+    <p class="caption download-note">External APK download. Confirm the download if your browser asks.</p>
+    <?php if ($isDrive): ?>
+      <p class="caption download-warning">Google Drive delivery is unverified. It may show a warning, quota limit, or confirmation page.</p>
+    <?php endif; ?>
+  <?php else: ?>
+    <button class="btn btn-primary get-main" type="button" disabled>Download unavailable</button>
+    <p class="caption download-warning">This app needs a valid public GitHub Release APK or Google Drive link.</p>
+  <?php endif; ?>
+
+  <div class="download-overlay" id="downloadOverlay" hidden>
+    <section class="download-sheet" id="downloadSheet" role="dialog" aria-modal="true"
+             aria-labelledby="downloadTitle" aria-describedby="downloadHelp" tabindex="-1">
+      <div class="download-handle" aria-hidden="true"></div>
+      <button class="download-close icon-btn" id="downloadClose" type="button" aria-label="Close download instructions">&#10005;</button>
+      <p class="caption download-eyebrow">DIRECT APK DOWNLOAD</p>
+      <h2 class="heading-2" id="downloadTitle">Check your browser downloads</h2>
+      <p class="body-default" id="downloadHelp">The APK link has been opened. If your browser asks, confirm the download. When it finishes, open the file from your notification or Downloads to start installation.</p>
+      <p class="caption download-safety">Only install apps you trust. Android may ask you to allow installs from this browser. This website cannot install an app automatically or confirm that a download finished.</p>
+      <p class="caption download-status" id="downloadStatus" role="status" aria-live="polite"></p>
+      <button class="btn btn-primary" id="downloadDone" type="button">Got it</button>
+    </section>
+  </div>
+  <script src="<?php echo e(SITE_URL); ?>/assets/js/main.js" defer></script>
 
   <?php if ($screens): ?>
   <section class="gallery">

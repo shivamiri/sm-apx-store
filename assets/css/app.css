@@ -60,3 +60,19 @@
   .download-overlay { align-items: center; padding: 24px; }
   .download-sheet { border-bottom: 1px solid var(--border-subtle); border-radius: 12px; }
 }
+
+/* Report App button, form and toast (Phase 3.3). */
+.report-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin: 0 0 var(--space-4); padding: 0 var(--space-2); background: none; border: 0; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer; }
+.report-link:focus-visible, .report-field:focus-visible, .report-cancel:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+.report-label { display: block; margin: 0 0 6px; color: var(--text-primary); }
+.report-field { display: block; width: 100%; box-sizing: border-box; margin: 0 0 16px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); font: inherit; font-size: 14px; }
+.report-details { resize: vertical; min-height: 96px; }
+.report-count { margin: -8px 0 12px; text-align: right; color: var(--text-tertiary); }
+.report-status { margin: 0 0 8px; line-height: 1.5; color: var(--text-secondary); }
+.report-status:empty { display: none; }
+.report-status.is-error { color: var(--status-warning); }
+.download-sheet .report-cancel { width: 100%; min-height: 44px; margin-top: 8px; background: transparent; border: 1px solid var(--border-subtle); color: var(--text-primary); }
+#reportSubmit[disabled] { opacity: .65; cursor: wait; }
+.report-toast[hidden] { display: none; }
+.report-toast { position: fixed; left: 16px; right: 16px; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 1100; max-width: 420px; margin: 0 auto; padding: 12px 16px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface-elevated); color: var(--text-primary); font-size: 14px; text-align: center; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.download-sheet form .btn { width: 100%; min-height: 44px; margin-top: 8px; }

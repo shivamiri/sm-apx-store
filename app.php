@@ -170,7 +170,7 @@ if (!$app) {
 $page_title = $app ? $app['app_name'] . ' - ' . APP_NAME : 'App not found - ' . APP_NAME;
 require_once __DIR__ . '/common/header.php';
 ?>
-<link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/app.css?v=3.1.1">
+<link rel="stylesheet" href="<?php echo SITE_URL; ?>/assets/css/app.css?v=3.3.1">
 
 <?php if (!$app): ?>
   <section class="notfound">
@@ -217,6 +217,11 @@ require_once __DIR__ . '/common/header.php';
     <p class="caption download-warning">This app needs a valid public GitHub Release APK or Google Drive link.</p>
   <?php endif; ?>
 
+  <button class="report-link" id="reportButton" type="button"
+          data-app-id="<?php echo (int) $app['id']; ?>"
+          data-endpoint="<?php echo e(SITE_URL . '/api/report_app.php'); ?>"
+          aria-haspopup="dialog" aria-controls="reportSheet">&#9873; Report App</button>
+
   <div class="download-overlay" id="downloadOverlay" hidden>
     <section class="download-sheet" id="downloadSheet" role="dialog" aria-modal="true"
              aria-labelledby="downloadTitle" aria-describedby="downloadHelp" tabindex="-1">
@@ -230,7 +235,34 @@ require_once __DIR__ . '/common/header.php';
       <button class="btn btn-primary" id="downloadDone" type="button">Got it</button>
     </section>
   </div>
-  <script src="<?php echo e(SITE_URL); ?>/assets/js/main.js" defer></script>
+  <div class="download-overlay" id="reportOverlay" hidden>
+    <section class="download-sheet" id="reportSheet" role="dialog" aria-modal="true"
+             aria-labelledby="reportTitle" tabindex="-1">
+      <div class="download-handle" aria-hidden="true"></div>
+      <button class="download-close icon-btn" id="reportClose" type="button" aria-label="Close report form">&#10005;</button>
+      <p class="caption download-eyebrow">REPORT APP</p>
+      <h2 class="heading-2" id="reportTitle">Report a problem</h2>
+      <form id="reportForm" novalidate>
+        <label class="report-label body-medium" for="reportReason">Reason</label>
+        <select class="report-field" id="reportReason" name="reason" required>
+          <option value="">Select a reason</option>
+          <option value="Broken Download Link">Broken Download Link</option>
+          <option value="Malware / Harmful">Malware / Harmful</option>
+          <option value="False Version Display">False Version Display</option>
+          <option value="Inappropriate Content">Inappropriate Content</option>
+          <option value="Other">Other</option>
+        </select>
+        <label class="report-label body-medium" for="reportDetails">Details (optional)</label>
+        <textarea class="report-field report-details" id="reportDetails" name="details" rows="4" maxlength="1000" placeholder="Tell us what is wrong"></textarea>
+        <p class="caption report-count" id="reportCount">0 / 1000</p>
+        <p class="caption report-status" id="reportStatus" role="status" aria-live="polite"></p>
+        <button class="btn btn-primary" id="reportSubmit" type="submit">Send report</button>
+        <button class="btn report-cancel" id="reportCancel" type="button">Cancel</button>
+      </form>
+    </section>
+  </div>
+  <div class="report-toast" id="reportToast" role="status" aria-live="polite" hidden></div>
+  <script src="<?php echo e(SITE_URL); ?>/assets/js/main.js?v=3.3.1" defer></script>
 
   <?php if ($screens): ?>
   <section class="gallery">

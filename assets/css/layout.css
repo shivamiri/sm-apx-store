@@ -51,3 +51,17 @@
   .bottom-nav { display: none; }
   .page { padding-bottom: var(--space-8); }
 }
+/* Header auth (Phase 4.1) */
+.login-btn {
+  display: inline-flex; align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--accent-primary); border-radius: var(--radius-xs);
+  color: var(--accent-primary); font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.login-btn:active { background: var(--accent-primary); color: #fff; }
+.nav-user { display: inline-flex; align-items: center; gap: 6px; max-width: 140px; }
+.nav-avatar { width: 24px; height: 24px; border-radius: 50%; }
+.nav-name {
+  color: var(--text-primary); font-size: 13px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

@@ -15,10 +15,11 @@ define('APP_NAME', 'SM Apx Store');
 define('APP_SHORT_NAME', 'Apx');
 define('SITE_URL', 'http://localhost:8080');
 
-// Google OAuth (fill in later)
-define('GOOGLE_CLIENT_ID', '');
-define('GOOGLE_CLIENT_SECRET', '');
-define('GOOGLE_REDIRECT_URI', SITE_URL . '/api/auth-google-callback.php');
+// Google Sign-In (Phase 4.1): copy this file to config.php and paste the
+// values from your OAuth client JSON. Never commit the real config.php.
+define('GOOGLE_CLIENT_ID', 'PASTE_CLIENT_ID_HERE');
+define('GOOGLE_CLIENT_SECRET', 'PASTE_CLIENT_SECRET_HERE');
+define('GOOGLE_REDIRECT_URI', 'http://localhost:8080/login.php');
 
 date_default_timezone_set('UTC');
 

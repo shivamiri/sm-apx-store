@@ -30,6 +30,7 @@ $page_title = isset($page_title) ? $page_title : APP_NAME;
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
     </a>
     <?php if (!empty($_SESSION['user_id'])): ?>
+    <a class="nav-my-apps" href="<?php echo SITE_URL; ?>/my-apps.php"<?php if (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'my-apps.php'): ?> aria-current="page"<?php endif; ?>>My Apps</a>
     <span class="nav-user" title="<?php echo htmlspecialchars($_SESSION['user_email'] ?? ''); ?>">
       <?php if (!empty($_SESSION['user_avatar'])): ?>
       <img class="nav-avatar" src="<?php echo htmlspecialchars($_SESSION['user_avatar']); ?>" alt="">

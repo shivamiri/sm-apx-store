@@ -1,11 +1,13 @@
 <?php
 /**
- * Developer Submission Form for Apx (Phase 4.2).
+ * Developer Submission Form for Apx (Tasks 4.2 + 4.3).
  *
  * Renders the "Submit New App" form: two columns on desktop, one column
- * on mobile. This task covers the UI and client-side validation only.
- * Size auto-detection arrives in Task 4.3, and POST processing (saving
- * the submission) arrives in Task 4.4, so the submit button is disabled.
+ * on mobile, with client-side validation (Task 4.2) and APK link
+ * verification with size auto-detection (Task 4.3, wired to
+ * assets/js/uploader.js and ajax_check_size.php). POST processing
+ * (saving the submission) arrives in Task 4.4, so the submit button
+ * stays disabled.
  *
  * Access: signed-in users only. Guests are sent to login.php and come
  * back here after Google sign-in (login.php honours the "back" path).
@@ -111,7 +113,19 @@ require_once __DIR__ . '/common/header.php';
       <div class="field">
         <label class="field-label" for="apk_source_url">APK Source Link</label>
         <input class="input" id="apk_source_url" name="apk_source_url" type="url" placeholder="https://github.com/you/repo/releases/download/v1.0.0/app.apk" required>
-        <p class="field-hint">Direct .apk link from a GitHub Release or a public Google Drive link.</p>
+        <div class="url-with-preview">
+          <button class="btn" id="verifyLinkBtn" type="button">Verify Link &amp; Calculate Size</button>
+          <input class="input" id="apkSizeDisplay" type="text" placeholder="Size appears here" readonly tabindex="-1" aria-label="Detected APK size">
+        </div>
+        <p class="field-hint" id="apkSizeStatus">Direct .apk link from a GitHub Release or a public Google Drive link.</p>
+        <div class="field" id="manualSizeWrap" hidden>
+          <label class="field-label" for="manual_size_mb">APK Size (MB)</label>
+          <input class="input" id="manual_size_mb" name="manual_size_mb" type="number" min="0.1" max="4096" step="0.1" placeholder="e.g. 25.4">
+          <p class="field-hint">Size detection failed - enter the APK size in megabytes (1 MB = 1024 KB).</p>
+        </div>
+        <!-- Filled by assets/js/uploader.js; Task 4.4 saves these into app_submissions. -->
+        <input type="hidden" id="size_bytes" name="size_bytes" value="">
+        <input type="hidden" id="size_formatted" name="size_formatted" value="">
       </div>
 
       <div class="banner">
@@ -269,5 +283,7 @@ require_once __DIR__ . '/common/header.php';
   refreshShotButtons();
 })();
 </script>
+
+<script src="<?php echo SITE_URL; ?>/assets/js/uploader.js"></script>
 
 <?php require_once __DIR__ . '/common/bottom.php'; ?>

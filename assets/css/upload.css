@@ -68,3 +68,6 @@ select.input { appearance: none; }
 @media (min-width: 768px) {
   .upload-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* Task 4.3: the hidden attribute must win over .field display:grid */
+#manualSizeWrap[hidden] { display: none; }

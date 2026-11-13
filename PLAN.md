@@ -176,7 +176,7 @@ Goal: Allow indie developers to authenticate via Google OAuth, view their person
   * **Dependencies:** Task 4.1, Task 1.5
   * **Verification:** Navigate to `upload.php` while signed in. Verify all fields render, live icon preview updates when typing an image URL, and unauthenticated access redirects to `login.php`.
 
-- [ ] **Task 4.3: APK Link Verification & Size Auto-Detection Engine**
+- [x] **Task 4.3: APK Link Verification & Size Auto-Detection Engine**
   * **Build:** Create `assets/js/uploader.js` and an internal PHP helper endpoint `ajax_check_size.php`. Issues lightweight HTTP `HEAD` request with `CURLOPT_NOBODY = true` to the submitted GitHub Release or Google Drive link. If `Content-Length` header is returned, auto-populates formatted MB and bytes. If file is on Google Drive and exceeds 100MB (or auto-detection fails), unlocks the mandatory manual size input field.
   * **Files Touched:** `ajax_check_size.php`, `assets/js/uploader.js`, `upload.php`
   * **Dependencies:** Task 4.2

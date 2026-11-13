@@ -170,7 +170,7 @@ Goal: Allow indie developers to authenticate via Google OAuth, view their person
   * **Verification:** Click "Sign in with Google" on website from phone browser. Complete Google account consent. Verify redirection back to site with user avatar in header, and check phpMyAdmin `users` table for new user record.
   * **Note:** `common/https.php` requires `common/cacert-bundle.pem` for verified HTTPS calls. This file is device-generated and intentionally not committed. To create it on Android/AWebServer: concatenate the PEM files from `/apex/com.android.conscrypt/cacerts` (fallback `/system/etc/security/cacerts`) into `common/cacert-bundle.pem`. The helper's certificate-folder path (CAPATH) is Android-specific; running it on a non-Android host would need that path adjusted - the CA bundle alone does not make it portable.
 
-- [ ] **Task 4.2: Developer Submission Form UI (`upload.php`)**
+- [x] **Task 4.2: Developer Submission Form UI (`upload.php`)**
   * **Build:** Create `upload.php` protected by Google session check. Renders two-column desktop / single-column mobile form: App Name, Package Name (with regex validator), Category dropdown, Icon URL (with live preview thumbnail), Feature Graphic URL, 1-8 Screenshot URLs, YouTube URL, Description, Version Code, Version Name, and APK Source Link (GitHub Release or Google Drive). Includes UI guidance advising GitHub Releases for APKs > 100MB.
   * **Files Touched:** `upload.php`
   * **Dependencies:** Task 4.1, Task 1.5

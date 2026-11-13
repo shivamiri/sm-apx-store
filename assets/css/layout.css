@@ -65,3 +65,99 @@
   color: var(--text-primary); font-size: 13px; font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Developer dashboard and header link (Task 4.5). */
+.nav-my-apps {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 40px; padding: 0 var(--space-2);
+  border-radius: var(--radius-sm); color: var(--text-primary);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.nav-my-apps:hover, .nav-my-apps[aria-current="page"] {
+  background: var(--bg-surface-hover); color: var(--accent-primary);
+}
+.nav-my-apps:focus-visible, .my-apps a:focus-visible,
+.my-apps-rejection summary:focus-visible {
+  outline: 2px solid var(--border-focused); outline-offset: 3px;
+}
+/* Keep the existing header on one line on narrow phones. */
+@media (max-width: 600px) {
+  .top-bar .nav-name { display: none; }
+}
+@media (max-width: 380px) {
+  .top-bar { padding-left: var(--space-2); padding-right: var(--space-2); }
+  .top-bar .brand-name, .top-bar .nav-user { display: none; }
+}
+.my-apps { max-width: 900px; margin: var(--space-4) auto 0; }
+.my-apps-heading {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4);
+}
+.my-apps-heading > div { min-width: 0; }
+.my-apps-heading h1 { margin: 0 0 var(--space-2); }
+.my-apps-heading p { margin: 0; }
+.my-apps-help { margin: 0 0 var(--space-4); }
+.my-apps-list { list-style: none; padding: 0; margin: 0; }
+.my-apps-card { margin-bottom: var(--space-3); }
+.my-apps-row {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start; gap: var(--space-3);
+}
+.my-apps-icon {
+  position: relative; width: 56px; height: 56px; overflow: hidden;
+  border-radius: var(--radius-icon); background: var(--bg-surface-elevated);
+  color: var(--accent-primary); font-size: 23px; font-weight: 700;
+}
+.my-apps-icon > span {
+  position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center;
+}
+.my-apps-icon img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  background: var(--bg-surface-elevated);
+}
+.my-apps-info { min-width: 0; overflow-wrap: anywhere; }
+.my-apps-name-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.my-apps-name-row h2 { margin: 0; }
+.my-apps-package {
+  margin: 4px 0; color: var(--text-secondary);
+  font-family: var(--font-mono); font-size: 11px; line-height: 17px;
+}
+.my-apps-version, .my-apps-target, .my-apps-source { margin: 4px 0 0; }
+.my-apps-source { font-size: 11px; }
+.my-apps-update {
+  padding: 1px 6px; border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs); color: var(--text-secondary);
+  font-size: 11px; font-weight: 600;
+}
+.my-apps-status {
+  grid-column: 2; justify-self: start;
+  padding: 4px 9px; border: 1px solid currentColor;
+  border-radius: var(--radius-full); white-space: nowrap;
+  font-size: 11px; line-height: 16px; font-weight: 700;
+}
+.my-apps-status-pending { color: #FCD34D; background: #30240B; }
+.my-apps-status-review { color: #93C5FD; background: #102A4A; }
+.my-apps-status-live { color: #6EE7B7; background: #082F25; }
+.my-apps-status-rejected { color: #FCA5A5; background: #3B151B; }
+.my-apps-status-neutral { color: var(--text-secondary); background: var(--bg-surface-elevated); }
+.my-apps-rejection, .my-apps-alert {
+  margin-top: var(--space-3); padding: var(--space-3);
+  border: 1px solid #FCA5A5; border-radius: var(--radius-sm);
+  background: #3B151B; color: #FCA5A5; overflow-wrap: anywhere;
+}
+.my-apps-rejection summary { cursor: pointer; font-weight: 600; min-height: 28px; }
+.my-apps-rejection p { margin: var(--space-2) 0 0; white-space: pre-wrap; }
+.my-apps-alert h2 { margin: 0; }
+.my-apps-alert .btn { color: inherit; border-color: currentColor; }
+.my-apps-empty { text-align: center; padding: var(--space-8) var(--space-4); }
+.my-apps-empty h2 { margin-top: 0; }
+[data-theme="light"] .my-apps-status-pending { color: #854D0E; background: #FEF3C7; }
+[data-theme="light"] .my-apps-status-review { color: #1E40AF; background: #DBEAFE; }
+[data-theme="light"] .my-apps-status-live { color: #065F46; background: #D1FAE5; }
+[data-theme="light"] .my-apps-status-rejected,
+[data-theme="light"] .my-apps-rejection,
+[data-theme="light"] .my-apps-alert { color: #991B1B; background: #FEE2E2; border-color: #991B1B; }
+@media (min-width: 640px) {
+  .my-apps-row { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .my-apps-status { grid-column: 3; grid-row: 1; }
+}

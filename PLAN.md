@@ -182,7 +182,7 @@ Goal: Allow indie developers to authenticate via Google OAuth, view their person
   * **Dependencies:** Task 4.2
   * **Verification:** In `upload.php`, input a valid public GitHub Release `.apk` link, tap "Verify Link & Calculate Size", and confirm size auto-populates. Test with an unresolvable link and confirm manual size field unlocks for entry.
 
-- [ ] **Task 4.4: App Submission & Zero-Downtime Update Processing**
+- [x] **Task 4.4: App Submission & Zero-Downtime Update Processing**
   * **Build:** Update `upload.php` POST processing logic. If the submission is for a brand new app, insert a record into `app_submissions` with `submission_type = 'new'` and `status = 'pending'`. If it is an update for an already Live app owned by this user, verify new `version_code` > existing `version_code`, leave the current live app untouched in `apps`, and insert the update into `app_submissions` with `submission_type = 'update'`, `app_id = :id`, and `status = 'pending'`.
   * **Files Touched:** `upload.php`
   * **Dependencies:** Task 4.3

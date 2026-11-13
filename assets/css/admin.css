@@ -1,0 +1,61 @@
+/* SM Apx Store - isolated admin screens (Task 5.1). Load after style.css. */
+.admin-page {
+  --admin-accent: #C4B5FD;
+  --admin-fill: #7C3AED;
+  --admin-tint: #21163B;
+  --admin-error-text: #FECACA;
+  --admin-error-bg: #371722;
+  --border-focused: var(--admin-accent);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg-base);
+  font-size: 14px;
+  line-height: 21px;
+}
+[data-theme="light"] .admin-page {
+  --admin-accent: #6D28D9;
+  --admin-fill: #6D28D9;
+  --admin-tint: #F1EBFF;
+  --admin-error-text: #991B1B;
+  --admin-error-bg: #FEF2F2;
+}
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border-top: 3px solid var(--admin-fill);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.admin-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text-primary); font-size: 18px; font-weight: 700; }
+.admin-mark { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--admin-fill); color: #FFF; }
+.admin-tag { display: inline-block; vertical-align: middle; margin-left: 5px; padding: 2px 7px; border: 1px solid var(--admin-accent); border-radius: 5px; color: var(--admin-accent); font-size: 10px; line-height: 16px; letter-spacing: .08em; }
+.admin-theme { min-height: 44px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-primary); font: inherit; cursor: pointer; }
+.admin-main { width: 100%; max-width: 480px; margin: 0 auto; padding: 32px 16px; }
+.admin-card { padding: 24px 20px; border: 1px solid var(--border-subtle); border-top: 3px solid var(--admin-fill); border-radius: var(--radius-md); background: var(--bg-surface); box-shadow: var(--shadow-1); overflow-wrap: anywhere; }
+.admin-eyebrow { margin: 0 0 12px; color: var(--admin-accent); font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+.admin-card h1 { margin: 0 0 12px; font-size: 26px; line-height: 34px; letter-spacing: -.02em; }
+.admin-intro { margin: 0 0 24px; color: var(--text-secondary); }
+.admin-form { display: grid; gap: 18px; }
+.admin-field { display: grid; gap: 8px; }
+.admin-field label { font-weight: 600; }
+.admin-field .input { min-height: 48px; font-size: 16px; background: var(--bg-base); }
+.admin-field .input:focus { border-color: var(--admin-accent); box-shadow: 0 0 0 2px var(--admin-tint); }
+.admin-primary { min-height: 48px; height: auto; padding: 12px 16px; background: var(--admin-fill); color: #FFF; border: 1px solid transparent; font-size: 14px; font-weight: 700; }
+.admin-primary:hover { filter: brightness(1.1); }
+.admin-note { margin: 20px 0; color: var(--text-secondary); font-size: 12px; line-height: 19px; }
+.admin-back { display: inline-flex; align-items: center; min-height: 44px; color: var(--admin-accent); font-weight: 600; }
+.admin-footer { margin: 20px 0 0; text-align: center; color: var(--text-secondary); font-size: 12px; }
+.admin-error { margin: 0 0 20px; padding: 12px; border: 1px solid var(--admin-error-text); border-radius: var(--radius-sm); background: var(--admin-error-bg); color: var(--admin-error-text); }
+.admin-placeholder { margin-bottom: 24px; padding: 16px; border: 1px solid var(--admin-accent); border-radius: var(--radius-sm); background: var(--admin-tint); }
+.admin-placeholder strong { color: var(--admin-accent); }
+.admin-placeholder p { margin: 8px 0 0; color: var(--text-secondary); }
+.admin-page a:focus-visible, .admin-page button:focus-visible { outline: 2px solid var(--admin-accent); outline-offset: 3px; }
+@media (min-width: 640px) {
+  .admin-topbar { padding-left: 32px; padding-right: 32px; }
+  .admin-main { padding-top: 64px; }
+  .admin-card { padding: 32px; }
+}

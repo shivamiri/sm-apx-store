@@ -205,7 +205,7 @@ Goal: Deliver a secure, password-authenticated desktop admin control panel where
 
 ### Tasks
 
-- [ ] **Task 5.1: Isolated Admin Authentication (`admin/login.php`)**
+- [x] **Task 5.1: Isolated Admin Authentication (`admin/login.php`)**
   * **Build:** Create `admin/login.php` with dedicated styling (`assets/css/admin.css`). Authenticates against `admins` table using username and `password_verify()` against `password_hash`. Uses the `checkRateLimit()` helper defined in `common/config.php` to lock the IP after 5 failed attempts for 15 minutes. Sets isolated session variable `$_SESSION['admin_logged_in'] = true`. Create `admin/logout.php`.
   * **Files Touched:** `admin/login.php`, `admin/logout.php`, `assets/css/admin.css`
   * **Dependencies:** Task 1.2b, Task 1.3

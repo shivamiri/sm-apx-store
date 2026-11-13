@@ -188,7 +188,7 @@ Goal: Allow indie developers to authenticate via Google OAuth, view their person
   * **Dependencies:** Task 4.3
   * **Verification:** Submit a new test app. Verify row in `app_submissions` has `submission_type = 'new'`. Then submit an update for an existing app; verify existing app in `apps` table remains `status = 'Live'` while new row in `app_submissions` has `submission_type = 'update'`.
 
-- [ ] **Task 4.5: Developer "My Apps" Dashboard (`my-apps.php`)**
+- [x] **Task 4.5: Developer "My Apps" Dashboard (`my-apps.php`)**
   * **Build:** Create `my-apps.php` listing all apps and pending submissions owned by the logged-in developer. Displays App Icon, Name, Package Name, Version, and status pills: Pending (Amber), In Review (Blue), Live (Green), Rejected (Red). If status is Rejected, displays an expandable alert box showing the admin's mandatory rejection note.
   * **Files Touched:** `my-apps.php`, `common/header.php`
   * **Dependencies:** Task 4.4

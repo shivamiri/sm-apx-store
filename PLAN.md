@@ -217,13 +217,13 @@ Goal: Deliver a secure, password-authenticated desktop admin control panel where
   * **Dependencies:** Task 5.1
   * **Verification:** Load `admin/common/header.php` via test page without active session; confirm immediate redirect to `admin/login.php`. Load with active admin session; verify sidebar and desktop layout render cleanly.
 
-- [ ] **Task 5.3: Admin Dashboard & Pending Moderation Queue (`admin/index.php`)**
+- [x] **Task 5.3: Admin Dashboard & Pending Moderation Queue (`admin/index.php`)**
   * **Build:** Create `admin/index.php` displaying live metric counters: Total Apps, Live Apps, Pending Submissions, and Banned Users. Displays a data table of pending submissions from `app_submissions` with app icon, name, developer email, APK test link, reported size, and action buttons: "Approve" and "Reject".
   * **Files Touched:** `admin/index.php`
   * **Dependencies:** Task 5.2
   * **Verification:** Open `admin/index.php` in desktop view. Verify metric cards match table counts and pending submissions appear in table rows.
 
-- [ ] **Task 5.4: Submission Approval & Rejection Logic**
+- [x] **Task 5.4: Submission Approval & Rejection Logic**
   * **Build:** Implement approval and rejection handlers in `admin/index.php`.
     * **Approve New App:** Moves submission data into `apps` (`status = 'Live'`), copies screenshots to `app_screenshots`, and marks submission `'approved'`.
     * **Approve Version Update:** Updates target `apps` record with new `version_code`, `version_name`, `apk_source_url`, `size_bytes`, `size_formatted`, and media URLs, and marks submission `'approved'`.

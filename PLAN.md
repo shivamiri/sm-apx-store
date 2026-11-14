@@ -211,9 +211,9 @@ Goal: Deliver a secure, password-authenticated desktop admin control panel where
   * **Dependencies:** Task 1.2b, Task 1.3
   * **Verification:** Open `https://yourdomain.com/admin/login.php` in browser, test invalid credentials (confirm error display and rate limit increment in `rate_limits` table), and submit valid credentials with the password set in Task 1.2b (confirm redirect to `admin/index.php`).
 
-- [ ] **Task 5.2: Admin Shared Header, Sidebar & Layout Partials**
+- [x] **Task 5.2: Admin Shared Header, Sidebar & Layout Partials**
   * **Build:** Create `admin/common/header.php` and `admin/common/bottom.php`. Header enforces admin authentication gatekeeper, displays left sidebar navigation (Dashboard, Submissions Queue, All Apps, Users, System Config, Logout), and renders top metric cards.
-  * **Files Touched:** `admin/common/header.php`, `admin/common/bottom.php`
+  * **Files Touched:** `admin/common/header.php`, `admin/common/bottom.php`, `admin/index.php`, `assets/css/admin.css`
   * **Dependencies:** Task 5.1
   * **Verification:** Load `admin/common/header.php` via test page without active session; confirm immediate redirect to `admin/login.php`. Load with active admin session; verify sidebar and desktop layout render cleanly.
 
